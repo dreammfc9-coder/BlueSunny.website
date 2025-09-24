@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Tính Sai Số Phép Đo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f8ff;
+      padding: 30px;
+      max-width: 600px;
+      margin: auto;
+    }
+    h1 {
+      text-align: center;
+      color: darkblue;
+    }
+    label {
+      font-weight: bold;
+    }
+    textarea, input {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0 15px 0;
+      border: 1px solid #aaa;
+      border-radius: 5px;
+    }
+    button {
+      background: darkblue;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: navy;
+    }
+    .result {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      border: 1px solid #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>Máy tính Sai Số</h1>
+
+  <label for="values">Nhập các giá trị đo (cách nhau bằng dấu phẩy):</label>
+  <textarea id="values" rows="4" placeholder="Ví dụ: 0.649, 0.651, 0.654, 0.653, 0.650"></textarea>
+
+  <label for="instrument">Sai số dụng cụ (ΔA'): </label>
+  <input type="number" id="instrument" step="0.0001" placeholder="Ví dụ: 0.001">
+
+  <button onclick="tinhSaiSo()">Tính toán</button>
+
+  <div class="result" id="result"></div>
+
+  <script>
+    function roundUncertainty(u) {
+      if (u <= 0) return [0.0, 0];
+      const order = Math.floor(Math.log10(u));
+      const norm = u / Math.pow(10, order);
+      const digits = (norm < 3 ? 2 : 1);
+      const roundedNorm = Math.round(norm * Math.pow(10, digits - 1)) / Math.pow(10, digits - 1);
+      const uRounded = roundedNorm * Math.pow(10, order);
+      const decimals = Math.max(0, -order + digits - 1);
+      return [uRounded, decimals];
+    }
+
+    function tinhSaiSo() {
+      const inputValues = document.getElementById("values").value;
+      const instrumentError = parseFloat(document.getElementById("instrument").value) || 0;
+
+      const values = inputValues.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+      if (values.length === 0) {
+        document.getElementById("result").innerHTML = "<b>⚠️ Vui lòng nhập dữ liệu hợp lệ!</b>";
+        return;
+      }
+
+      const n = values.length;
+      const mean = values.reduce((a, b) => a + b, 0) / n;
+      const deltaRandom = values.reduce((sum, v) => sum + Math.abs(mean - v), 0) / n;
+      const deltaTotal = deltaRandom + instrumentError;
+
+      const [deltaRounded, decimals] = roundUncertainty(deltaTotal);
+      const meanRounded = mean.toFixed(decimals);
+      const relativeError = (deltaRounded / mean * 100).toFixed(3);
+
+      document.getElementById("result").innerHTML = `
+        <p><b>Giá trị trung bình (không làm tròn):</b> ${mean}</p>
+        <p><b>Sai số ngẫu nhiên:</b> ${deltaRandom.toFixed(6)}</p>
+        <p><b>Sai số toàn phần (chưa làm tròn):</b> ${deltaTotal.toFixed(6)}</p>
+        <p><b>Sai số (làm tròn):</b> ${deltaRounded.toFixed(decimals)}</p>
+        <p><b>Giá trị trung bình (làm tròn):</b> ${meanRounded}</p>
+        <p><b>Sai số tỉ đối:</b> ${relativeError}%</p>
+        <hr>
+        <h3>Kết quả phép đo: A = (${meanRounded} ± ${deltaRounded.toFixed(decimals)})</h3>
+      `;
+    }
+  </script>
+</body>
+</html>
